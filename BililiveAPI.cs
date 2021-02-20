@@ -1,82 +1,68 @@
-﻿using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
-namespace BililiveRecorder.Core
+#nullable enable
+namespace BiliveDanmakuAgent.Core
 {
-    internal static class BililiveAPI
+    public class BililiveAPI
     {
+        private const string HTTP_HEADER_ACCEPT = "application/json, text/javascript, */*; q=0.01";
+        private const string HTTP_HEADER_REFERER = "https://live.bilibili.com/";
+        private const string DEFAULT_SERVER_HOST = "broadcastlv.chat.bilibili.com";
+        private const int DEFAULT_SERVER_PORT = 2243;
+
         private static readonly Random random = new Random();
-        private static readonly SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
-        private static HttpClient httpclient;
-        const string UA = "";
-        static BililiveAPI()
+
+        private readonly HttpClient danmakuhttpclient;
+        private HttpClient httpclient = null!;
+
+        public BililiveAPI(string? cookieString)
         {
-            httpclient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            httpclient.DefaultRequestHeaders.Add("Accept", "application/json, text/javascript, */*; q=0.01");
-            httpclient.DefaultRequestHeaders.Add("Referer", "https://live.bilibili.com/");
-            httpclient.DefaultRequestHeaders.Add("User-Agent", UA);
+            this.ApplyCookieSettings(cookieString);
+
+            this.danmakuhttpclient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            this.danmakuhttpclient.DefaultRequestHeaders.Add("Accept", HTTP_HEADER_ACCEPT);
+            this.danmakuhttpclient.DefaultRequestHeaders.Add("Referer", HTTP_HEADER_REFERER);
+            this.danmakuhttpclient.DefaultRequestHeaders.Add("User-Agent", Utils.UserAgent);
         }
 
-        public static async Task ApplyCookieSettings(string cookie_string)
+        public void ApplyCookieSettings(string? cookie_string)
         {
-            await semaphoreSlim.WaitAsync();
             try
             {
                 if (!string.IsNullOrWhiteSpace(cookie_string))
                 {
-                    try
+                    var pclient = new HttpClient(handler: new HttpClientHandler
                     {
-                        CookieContainer cc = new CookieContainer();
-                        cc.PerDomainCapacity = 300;
-                        foreach (var t in cookie_string.Trim(' ', ';').Split(';').Select(x => x.Trim().Split(new[] { '=' }, 2)))
-                        {
-                            try
-                            {
-                                string v = string.Empty;
-                                if (t.Length == 2)
-                                {
-                                    v = System.Web.HttpUtility.UrlDecode(t[1]).Trim();
-                                }
-
-                                cc.Add(new Cookie(t[0].Trim(), v, "/", ".bilibili.com"));
-                            }
-                            catch (Exception) { }
-                        }
-
-                        var pclient = new HttpClient(handler: new HttpClientHandler
-                        {
-                            CookieContainer = cc
-                        }, disposeHandler: true)
-                        {
-                            Timeout = TimeSpan.FromSeconds(5)
-                        };
-                        pclient.DefaultRequestHeaders.Add("Accept", "application/json, text/javascript, */*; q=0.01");
-                        pclient.DefaultRequestHeaders.Add("Referer", "https://live.bilibili.com/");
-                        pclient.DefaultRequestHeaders.Add("User-Agent", UA);
-
-                        httpclient = pclient;
-                        return;
-                    }
-                    catch (Exception ex)
+                        UseCookies = false,
+                        UseDefaultCredentials = false,
+                    }, disposeHandler: true)
                     {
-                        //设置cookie出错
-                    }
+                        Timeout = TimeSpan.FromSeconds(10)
+                    };
+                    pclient.DefaultRequestHeaders.Add("Accept", HTTP_HEADER_ACCEPT);
+                    pclient.DefaultRequestHeaders.Add("Referer", HTTP_HEADER_REFERER);
+                    pclient.DefaultRequestHeaders.Add("User-Agent", Utils.UserAgent);
+                    pclient.DefaultRequestHeaders.Add("Cookie", cookie_string);
+                    this.httpclient = pclient;
                 }
-
-                var cleanclient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                cleanclient.DefaultRequestHeaders.Add("Accept", "application/json, text/javascript, */*; q=0.01");
-                cleanclient.DefaultRequestHeaders.Add("Referer", "https://live.bilibili.com/");
-                cleanclient.DefaultRequestHeaders.Add("User-Agent", UA);
-                httpclient = cleanclient;
+                else
+                {
+                    var cleanclient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                    cleanclient.DefaultRequestHeaders.Add("Accept", HTTP_HEADER_ACCEPT);
+                    cleanclient.DefaultRequestHeaders.Add("Referer", HTTP_HEADER_REFERER);
+                    cleanclient.DefaultRequestHeaders.Add("User-Agent", Utils.UserAgent);
+                    this.httpclient = cleanclient;
+                }
             }
-            finally
+            catch (Exception ex)
             {
-                semaphoreSlim.Release();
+                //logger.Error(ex, "设置 Cookie 时发生错误");
             }
         }
 
@@ -87,22 +73,17 @@ namespace BililiveRecorder.Core
         /// <returns>数据</returns>
         /// <exception cref="ArgumentNullException"/>
         /// <exception cref="WebException"/>
-        public static async Task<JObject> HttpGetJsonAsync(string url)
+        private async Task<JObject?> HttpGetJsonAsync(HttpClient client, string url)
         {
-            await semaphoreSlim.WaitAsync();
             try
             {
-                var s = await httpclient.GetStringAsync(url);
+                var s = await client.GetStringAsync(url);
                 var j = JObject.Parse(s);
                 return j;
             }
             catch (TaskCanceledException)
             {
                 return null;
-            }
-            finally
-            {
-                semaphoreSlim.Release();
             }
         }
 
@@ -113,49 +94,20 @@ namespace BililiveRecorder.Core
         /// <returns>FLV播放地址</returns>
         /// <exception cref="WebException"/>
         /// <exception cref="Exception"/>
-        public static async Task<string> GetPlayUrlAsync(int roomid,bool avoidtxy=true)
+        public async Task<string?> GetPlayUrlAsync(int roomid)
         {
-            string url = $@"https://api.live.bilibili.com/room/v1/Room/playUrl?cid={roomid}&quality=4&platform=web";
-            if (avoidtxy)
+            var url = $@"https://api.live.bilibili.com/room/v1/Room/playUrl?cid={roomid}&quality=4&platform=web";
+            // 随机选择一个 url
+            if ((await this.HttpGetJsonAsync(this.httpclient, url))?["data"]?["durl"] is JArray array)
             {
-                // 尽量避开腾讯云
-                int attempt_left = 3;
-                while (true)
+                var urls = array.Select(t => t?["url"]?.ToObject<string>());
+                var distinct = urls.Distinct().ToArray();
+                if (distinct.Length > 0)
                 {
-                    attempt_left--;
-                    if ((await HttpGetJsonAsync(url))?["data"]?["durl"] is JArray all_jtoken && all_jtoken.Count > 0)
-                    {
-                        var all = all_jtoken.Select(x => x["url"].ToObject<string>()).ToArray();
-                        var withoutTxy = all.Where(x => !x.Contains("txy.")).ToArray();
-                        if (withoutTxy.Length > 0)
-                        {
-                            return withoutTxy[random.Next(withoutTxy.Length)];
-                        }
-                        else if (attempt_left <= 0)
-                        {
-                            return all[random.Next(all.Length)];
-                        }
-                    }
-                    else
-                    {
-                        throw new Exception("没有直播播放地址");
-                    }
+                    return distinct[random.Next(distinct.Length)];
                 }
             }
-            else
-            {
-                // 随机选择一个 url
-                if ((await HttpGetJsonAsync(url))?["data"]?["durl"] is JArray array)
-                {
-                    var urls = array.Select(t => t?["url"]?.ToObject<string>());
-                    var distinct = urls.Distinct().ToArray();
-                    if (distinct.Length > 0)
-                    {
-                        return distinct[random.Next(distinct.Length)];
-                    }
-                }
-                throw new Exception("没有直播播放地址");
-            }
+            return null;
         }
 
         /// <summary>
@@ -165,21 +117,21 @@ namespace BililiveRecorder.Core
         /// <returns>直播间信息</returns>
         /// <exception cref="WebException"/>
         /// <exception cref="Exception"/>
-        public static async Task<RoomInfo> GetRoomInfoAsync(int roomid)
+        public async Task<RoomInfo?> GetRoomInfoAsync(int roomid)
         {
             try
             {
-                var room = await HttpGetJsonAsync($@"https://api.live.bilibili.com/room/v1/Room/get_info?id={roomid}");
+                var room = await this.HttpGetJsonAsync(this.httpclient, $@"https://api.live.bilibili.com/room/v1/Room/get_info?id={roomid}");
                 if (room?["code"]?.ToObject<int>() != 0)
                 {
-                    //logger.Warn("不能获取 {roomid} 的信息1: {errormsg}", roomid, room?["message"]?.ToObject<string>() ?? "网络超时");
+                    //logger.Warn("不能获取 {roomid} 的信息1: {errormsg}", roomid, room?["message"]?.ToObject<string>() ?? "请求超时");
                     return null;
                 }
 
-                var user = await HttpGetJsonAsync($@"https://api.live.bilibili.com/live_user/v1/UserInfo/get_anchor_in_room?roomid={roomid}");
+                var user = await this.HttpGetJsonAsync(this.httpclient, $@"https://api.live.bilibili.com/live_user/v1/UserInfo/get_anchor_in_room?roomid={roomid}");
                 if (user?["code"]?.ToObject<int>() != 0)
                 {
-                    //logger.Warn("不能获取 {roomid} 的信息2: {errormsg}", roomid, user?["message"]?.ToObject<string>() ?? "网络超时");
+                    //logger.Warn("不能获取 {roomid} 的信息2: {errormsg}", roomid, user?["message"]?.ToObject<string>() ?? "请求超时");
                     return null;
                 }
 
@@ -189,14 +141,72 @@ namespace BililiveRecorder.Core
                     RoomId = room?["data"]?["room_id"]?.ToObject<int>() ?? throw new Exception("未获取到直播间信息"),
                     IsStreaming = 1 == (room?["data"]?["live_status"]?.ToObject<int>() ?? throw new Exception("未获取到直播间信息")),
                     UserName = user?["data"]?["info"]?["uname"]?.ToObject<string>() ?? throw new Exception("未获取到直播间信息"),
+                    Title = room?["data"]?["title"]?.ToObject<string>() ?? throw new Exception("未获取到直播间信息"),
+                    ParentAreaName = room?["data"]?["parent_area_name"]?.ToObject<string>() ?? throw new Exception("未获取到直播间信息"),
+                    AreaName = room?["data"]?["area_name"]?.ToObject<string>() ?? throw new Exception("未获取到直播间信息"),
                 };
                 return i;
             }
             catch (Exception ex)
             {
                 //logger.Warn(ex, "获取直播间 {roomid} 的信息时出错", roomid);
-                //throw;
-                return null;
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 获取弹幕连接信息
+        /// </summary>
+        /// <param name="roomid"></param>
+        /// <returns></returns>
+        public async Task<(string token, string host, int port)> GetDanmuConf(int roomid)
+        {
+            try
+            {
+                var result = await this.HttpGetJsonAsync(this.danmakuhttpclient, $@"https://api.live.bilibili.com/room/v1/Danmu/getConf?room_id={roomid}&platform=pc&player=web");
+
+                if (result?["code"]?.ToObject<int>() == 0)
+                {
+                    var token = result?["data"]?["token"]?.ToObject<string>() ?? string.Empty;
+
+                    var servers = new List<(string? host, int port)>();
+
+                    if (result?["data"]?["host_server_list"] is JArray host_server_list)
+                    {
+                        foreach (var host_server_jtoken in host_server_list)
+                            if (host_server_jtoken is JObject host_server)
+                                servers.Add((host_server["host"]?.ToObject<string>(), host_server["port"]?.ToObject<int>() ?? 0));
+                    }
+
+                    if (result?["data"]?["server_list"] is JArray server_list)
+                    {
+                        foreach (var server_jtoken in server_list)
+                            if (server_jtoken is JObject server)
+                                servers.Add((server["host"]?.ToObject<string>(), server["port"]?.ToObject<int>() ?? 0));
+                    }
+
+                    servers.RemoveAll(x => string.IsNullOrWhiteSpace(x.host) || x.port <= 0 || x.host == DEFAULT_SERVER_HOST);
+
+                    if (servers.Count > 0)
+                    {
+                        var (host, port) = servers[random.Next(servers.Count)];
+                        return (token, host!, port);
+                    }
+                    else
+                    {
+                        return (token, DEFAULT_SERVER_HOST, DEFAULT_SERVER_PORT);
+                    }
+                }
+                else
+                {
+                    //logger.Warn("获取直播间 {roomid} 的弹幕连接信息时返回了 {code}", roomid, result?["code"]?.ToObject<int>());
+                    return (string.Empty, DEFAULT_SERVER_HOST, DEFAULT_SERVER_PORT);
+                }
+            }
+            catch (Exception ex)
+            {
+                //logger.Warn(ex, "获取直播间 {roomid} 的弹幕连接信息时出错", roomid);
+                return (string.Empty, DEFAULT_SERVER_HOST, DEFAULT_SERVER_PORT);
             }
         }
     }

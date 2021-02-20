@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BiliveDanmakuAgent": {
+      "commandName": "Project",
+      "remoteDebugEnabled": false
+    }
+  }
+}

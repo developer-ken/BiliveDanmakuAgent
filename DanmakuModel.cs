@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+using Newtonsoft.Json.Linq;
 
-namespace BililiveRecorder.Core
+#nullable enable
+namespace BiliveDanmakuAgent.Core
 {
     public enum MsgTypeEnum
     {
@@ -9,22 +9,18 @@ namespace BililiveRecorder.Core
         /// 彈幕
         /// </summary>
         Comment,
-
         /// <summary>
         /// 禮物
         /// </summary>
         GiftSend,
-
         /// <summary>
         /// 歡迎老爷
         /// </summary>
         Welcome,
-
         /// <summary>
         /// 直播開始
         /// </summary>
         LiveStart,
-
         /// <summary>
         /// 直播結束
         /// </summary>
@@ -40,8 +36,15 @@ namespace BililiveRecorder.Core
         /// <summary>
         /// 购买船票（上船）
         /// </summary>
-        GuardBuy
-
+        GuardBuy,
+        /// <summary>
+        /// SuperChat
+        /// </summary>
+        SuperChat,
+        /// <summary>
+        /// 房间信息更新
+        /// </summary>
+        RoomChange
     }
 
     public class DanmakuModel
@@ -52,35 +55,27 @@ namespace BililiveRecorder.Core
         public MsgTypeEnum MsgType { get; set; }
 
         /// <summary>
+        /// 房间标题
+        /// </summary>
+        public string? Title { get; set; }
+
+        /// <summary>
+        /// 大分区
+        /// </summary>
+        public string? ParentAreaName { get; set; }
+
+        /// <summary>
+        /// 子分区
+        /// </summary>
+        public string? AreaName { get; set; }
+
+        /// <summary>
         /// 彈幕內容
         /// <para>此项有值的消息类型：<list type="bullet">
         /// <item><see cref="MsgTypeEnum.Comment"/></item>
         /// </list></para>
         /// </summary>
-        public string CommentText { get; set; }
-        
-        /// <summary>
-        /// 弹幕被发送的时间
-        /// </summary>
-        public int SendTime { get; set; }
-
-        /// <summary>
-        /// 弹幕该如何被显示
-        /// <para>此项有值的消息类型：<list type="bullet">
-        /// <item><see cref="MsgTypeEnum.Comment"/></item>
-        /// </list></para>
-        /// </summary>
-        public JToken DanmakuDisplayInfo { get; set; }
-
-        /// <summary>
-        /// 彈幕用戶
-        /// </summary>
-        [Obsolete("请使用 UserName")]
-        public string CommentUser
-        {
-            get { return UserName; }
-            set { UserName = value; }
-        }
+        public string? CommentText { get; set; }
 
         /// <summary>
         /// 消息触发者用户名
@@ -92,7 +87,17 @@ namespace BililiveRecorder.Core
         /// <item><see cref="MsgTypeEnum.GuardBuy"/></item>
         /// </list></para>
         /// </summary>
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
+
+        /// <summary>
+        /// SC 价格
+        /// </summary>
+        public double Price { get; set; }
+
+        /// <summary>
+        /// SC 保持时间
+        /// </summary>
+        public int SCKeepTime { get; set; }
 
         /// <summary>
         /// 消息触发者用户ID
@@ -118,25 +123,9 @@ namespace BililiveRecorder.Core
         public int UserGuardLevel { get; set; }
 
         /// <summary>
-        /// 禮物用戶
-        /// </summary>
-        [Obsolete("请使用 UserName")]
-        public string GiftUser
-        {
-            get { return UserName; }
-            set { UserName = value; }
-        }
-
-        /// <summary>
         /// 禮物名稱
         /// </summary>
-        public string GiftName { get; set; }
-
-        /// <summary>
-        /// 禮物數量
-        /// </summary>
-        [Obsolete("请使用 GiftCount")]
-        public string GiftNum { get { return GiftCount.ToString(); } }
+        public string? GiftName { get; set; }
 
         /// <summary>
         /// 礼物数量
@@ -147,13 +136,6 @@ namespace BililiveRecorder.Core
         /// <para>此字段也用于标识上船 <see cref="MsgTypeEnum.GuardBuy"/> 的数量（月数）</para>
         /// </summary>
         public int GiftCount { get; set; }
-
-        /// <summary>
-        /// 当前房间的礼物积分（Room Cost）
-        /// 因以前出现过不传递rcost的礼物，并且用处不大，所以弃用
-        /// </summary>
-        [Obsolete("如有需要请自行解析RawData", true)]
-        public string Giftrcost { get { return "0"; } set { } }
 
         /// <summary>
         /// 该用户是否为房管（包括主播）
@@ -176,12 +158,17 @@ namespace BililiveRecorder.Core
         /// <summary>
         /// <see cref="MsgTypeEnum.LiveStart"/>,<see cref="MsgTypeEnum.LiveEnd"/> 事件对应的房间号
         /// </summary>
-        public string RoomID { get; set; }
+        public string? RoomID { get; set; }
 
         /// <summary>
         /// 原始数据, 高级开发用
         /// </summary>
-        public string RawData { get; set; }
+        public string? RawData { get; set; }
+
+        /// <summary>
+        /// 原始数据, 高级开发用
+        /// </summary>
+        public JObject? RawObj { get; set; }
 
         /// <summary>
         /// 内部用, JSON数据版本号 通常应该是2
@@ -193,39 +180,67 @@ namespace BililiveRecorder.Core
 
         public DanmakuModel(string JSON)
         {
-            RawData = JSON;
-            JSON_Version = 2;
+            this.RawData = JSON;
+            this.JSON_Version = 2;
 
             var obj = JObject.Parse(JSON);
-            string cmd = obj["cmd"]?.ToObject<string>();
+            this.RawObj = obj;
+            var cmd = obj["cmd"]?.ToObject<string>();
             switch (cmd)
             {
                 case "LIVE":
-                    MsgType = MsgTypeEnum.LiveStart;
-                    RoomID = obj["roomid"].ToObject<string>();
+                    this.MsgType = MsgTypeEnum.LiveStart;
+                    this.RoomID = obj["roomid"].ToObject<string>();
                     break;
                 case "PREPARING":
-                    MsgType = MsgTypeEnum.LiveEnd;
-                    RoomID = obj["roomid"].ToObject<string>();
+                    this.MsgType = MsgTypeEnum.LiveEnd;
+                    this.RoomID = obj["roomid"].ToObject<string>();
                     break;
                 case "DANMU_MSG":
-                    MsgType = MsgTypeEnum.Comment;
-                    CommentText = obj["info"][1].ToObject<string>();
-                    UserID = obj["info"][2][0].ToObject<int>();
-                    UserName = obj["info"][2][1].ToObject<string>();
-                    IsAdmin = obj["info"][2][2].ToObject<string>() == "1";
-                    IsVIP = obj["info"][2][3].ToObject<string>() == "1";
-                    UserGuardLevel = obj["info"][7].ToObject<int>();
-                    SendTime = obj["info"][9]["ts"].ToObject<int>();
-                    DanmakuDisplayInfo = obj["info"][0];
+                    this.MsgType = MsgTypeEnum.Comment;
+                    this.CommentText = obj["info"][1].ToObject<string>();
+                    this.UserID = obj["info"][2][0].ToObject<int>();
+                    this.UserName = obj["info"][2][1].ToObject<string>();
+                    this.IsAdmin = obj["info"][2][2].ToObject<string>() == "1";
+                    this.IsVIP = obj["info"][2][3].ToObject<string>() == "1";
+                    this.UserGuardLevel = obj["info"][7].ToObject<int>();
                     break;
                 case "SEND_GIFT":
-                    MsgType = MsgTypeEnum.GiftSend;
-                    GiftName = obj["data"]["giftName"].ToObject<string>();
-                    UserName = obj["data"]["uname"].ToObject<string>();
-                    UserID = obj["data"]["uid"].ToObject<int>();
-                    GiftCount = obj["data"]["num"].ToObject<int>();
+                    this.MsgType = MsgTypeEnum.GiftSend;
+                    this.GiftName = obj["data"]["giftName"].ToObject<string>();
+                    this.UserName = obj["data"]["uname"].ToObject<string>();
+                    this.UserID = obj["data"]["uid"].ToObject<int>();
+                    this.GiftCount = obj["data"]["num"].ToObject<int>();
                     break;
+                case "GUARD_BUY":
+                    {
+                        this.MsgType = MsgTypeEnum.GuardBuy;
+                        this.UserID = obj["data"]["uid"].ToObject<int>();
+                        this.UserName = obj["data"]["username"].ToObject<string>();
+                        this.UserGuardLevel = obj["data"]["guard_level"].ToObject<int>();
+                        this.GiftName = this.UserGuardLevel == 3 ? "舰长" : this.UserGuardLevel == 2 ? "提督" : this.UserGuardLevel == 1 ? "总督" : "";
+                        this.GiftCount = obj["data"]["num"].ToObject<int>();
+                        break;
+                    }
+                case "SUPER_CHAT_MESSAGE":
+                    {
+                        this.MsgType = MsgTypeEnum.SuperChat;
+                        this.CommentText = obj["data"]["message"]?.ToString();
+                        this.UserID = obj["data"]["uid"].ToObject<int>();
+                        this.UserName = obj["data"]["user_info"]["uname"].ToString();
+                        this.Price = obj["data"]["price"].ToObject<double>();
+                        this.SCKeepTime = obj["data"]["time"].ToObject<int>();
+                        break;
+                    }
+                case "ROOM_CHANGE":
+                    {
+                        this.MsgType = MsgTypeEnum.RoomChange;
+                        this.Title = obj["data"]?["title"]?.ToObject<string>();
+                        this.AreaName = obj["data"]?["area_name"]?.ToObject<string>();
+                        this.ParentAreaName = obj["data"]?["parent_area_name"]?.ToObject<string>();
+                        break;
+                    }
+                /*
                 case "WELCOME":
                     {
                         MsgType = MsgTypeEnum.Welcome;
@@ -234,7 +249,6 @@ namespace BililiveRecorder.Core
                         IsVIP = true;
                         IsAdmin = obj["data"]?["is_admin"]?.ToObject<bool>() ?? obj["data"]?["isadmin"]?.ToObject<string>() == "1";
                         break;
-
                     }
                 case "WELCOME_GUARD":
                     {
@@ -244,19 +258,10 @@ namespace BililiveRecorder.Core
                         UserGuardLevel = obj["data"]["guard_level"].ToObject<int>();
                         break;
                     }
-                case "GUARD_BUY":
-                    {
-                        MsgType = MsgTypeEnum.GuardBuy;
-                        UserID = obj["data"]["uid"].ToObject<int>();
-                        UserName = obj["data"]["username"].ToObject<string>();
-                        UserGuardLevel = obj["data"]["guard_level"].ToObject<int>();
-                        GiftName = UserGuardLevel == 3 ? "舰长" : UserGuardLevel == 2 ? "提督" : UserGuardLevel == 1 ? "总督" : "";
-                        GiftCount = obj["data"]["num"].ToObject<int>();
-                        break;
-                    }
+                */
                 default:
                     {
-                        MsgType = MsgTypeEnum.Unknown;
+                        this.MsgType = MsgTypeEnum.Unknown;
                         break;
                     }
             }
