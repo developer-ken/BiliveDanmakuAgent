@@ -143,6 +143,8 @@ namespace BiliveDanmakuAgent.Core
             }
         }
 
+        private bool isLiveRunning = false;
+
         private void Receiver_ReceivedDanmaku(object sender, ReceivedDanmakuArgs e)
         {
             switch (e.Danmaku.MsgType)
@@ -154,6 +156,7 @@ namespace BiliveDanmakuAgent.Core
                     }
                     break;
                 case MsgTypeEnum.LiveEnd:
+                    isLiveRunning = false;
                     break;
                 default:
                     break;
@@ -203,7 +206,11 @@ namespace BiliveDanmakuAgent.Core
                 await Task.Delay(millisecondsDelay).ConfigureAwait(false);
                 if ((await this.FetchRoomInfoAsync().ConfigureAwait(false))?.IsStreaming ?? false)
                 {
-                    StreamStarted?.Invoke(this, new StreamStartedArgs() { type = type });
+                    if (!isLiveRunning)
+                    {
+                        isLiveRunning = true;//http来的只触发一次
+                        StreamStarted?.Invoke(this, new StreamStartedArgs() { type = type });
+                    }
                 }
             });
         }
