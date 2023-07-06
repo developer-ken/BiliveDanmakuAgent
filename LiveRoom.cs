@@ -9,7 +9,7 @@ namespace BiliveDanmakuAgent
 {
     public class LiveRoom
     {
-        public int rid;
+        public long rid;
         public StreamMonitor sm;
         public LiveRoom(int roomid, string cookiestr = null)
         {

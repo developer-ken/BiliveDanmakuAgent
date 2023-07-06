@@ -109,7 +109,7 @@ namespace BiliveDanmakuAgent.Core
         /// <item><see cref="MsgTypeEnum.GuardBuy"/></item>
         /// </list></para>
         /// </summary>
-        public int UserID { get; set; }
+        public long UserID { get; set; }
 
         /// <summary>
         /// 用户舰队等级
@@ -199,7 +199,7 @@ namespace BiliveDanmakuAgent.Core
                 case "DANMU_MSG":
                     this.MsgType = MsgTypeEnum.Comment;
                     this.CommentText = obj["info"][1].ToObject<string>();
-                    this.UserID = obj["info"][2][0].ToObject<int>();
+                    this.UserID = obj["info"][2][0].ToObject<long>();
                     this.UserName = obj["info"][2][1].ToObject<string>();
                     this.IsAdmin = obj["info"][2][2].ToObject<string>() == "1";
                     this.IsVIP = obj["info"][2][3].ToObject<string>() == "1";
@@ -209,13 +209,13 @@ namespace BiliveDanmakuAgent.Core
                     this.MsgType = MsgTypeEnum.GiftSend;
                     this.GiftName = obj["data"]["giftName"].ToObject<string>();
                     this.UserName = obj["data"]["uname"].ToObject<string>();
-                    this.UserID = obj["data"]["uid"].ToObject<int>();
+                    this.UserID = obj["data"]["uid"].ToObject<long>();
                     this.GiftCount = obj["data"]["num"].ToObject<int>();
                     break;
                 case "GUARD_BUY":
                     {
                         this.MsgType = MsgTypeEnum.GuardBuy;
-                        this.UserID = obj["data"]["uid"].ToObject<int>();
+                        this.UserID = obj["data"]["uid"].ToObject<long>();
                         this.UserName = obj["data"]["username"].ToObject<string>();
                         this.UserGuardLevel = obj["data"]["guard_level"].ToObject<int>();
                         this.GiftName = this.UserGuardLevel == 3 ? "舰长" : this.UserGuardLevel == 2 ? "提督" : this.UserGuardLevel == 1 ? "总督" : "";
@@ -226,7 +226,7 @@ namespace BiliveDanmakuAgent.Core
                     {
                         this.MsgType = MsgTypeEnum.SuperChat;
                         this.CommentText = obj["data"]["message"]?.ToString();
-                        this.UserID = obj["data"]["uid"].ToObject<int>();
+                        this.UserID = obj["data"]["uid"].ToObject<long>();
                         this.UserName = obj["data"]["user_info"]["uname"].ToString();
                         this.Price = obj["data"]["price"].ToObject<double>();
                         this.SCKeepTime = obj["data"]["time"].ToObject<int>();

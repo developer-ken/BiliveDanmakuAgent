@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net;
 using Newtonsoft.Json;
 using Timer = System.Timers.Timer;
 
@@ -26,6 +27,7 @@ namespace BiliveDanmakuAgent.Core
      * */
     public class StreamMonitor : IStreamMonitor
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(StreamMonitor));
         private readonly Func<TcpClient> funcTcpClient;
         private readonly BililiveAPI bililiveAPI;
 
@@ -44,8 +46,6 @@ namespace BiliveDanmakuAgent.Core
         public event RoomInfoUpdatedEvent RoomInfoUpdated;
         public event StreamStartedEvent StreamStarted;
         public event ReceivedDanmakuEvt ReceivedDanmaku;
-        public event ExceptionHappenedEvt ExceptionHappened;
-        public event LogOutputEvent LogOutput;
         public event PropertyChangedEventHandler PropertyChanged;
 
         public StreamMonitor(int roomId, Func<TcpClient> funcTcpClient, BililiveAPI bililiveAPI)
@@ -85,7 +85,7 @@ namespace BiliveDanmakuAgent.Core
                 }
                 catch (Exception ex)
                 {
-                    ExceptionHappened?.Invoke(this, ex, "检测开播状态失败");
+                    log.Warn("Failed to detect live status", ex);
                 }
             };
         }
@@ -126,7 +126,7 @@ namespace BiliveDanmakuAgent.Core
                 }
                 catch (Exception ex)
                 {
-                    ExceptionHappened?.Invoke(this, ex, "检测开播状态失败");
+                    log.Warn("Failed to detect live status", ex);
                 }
             };
         }
@@ -231,7 +231,7 @@ namespace BiliveDanmakuAgent.Core
             bool connect_result = false;
             while (!this.IsDanmakuConnected && !this.dmTokenSource.Token.IsCancellationRequested)
             {
-                LogOutput?.Invoke(this, "正在连接弹幕服务器...");
+                log.Info("Connecting to Danmaku server...");
                 connect_result = await this.ConnectAsync().ConfigureAwait(false);
                 if (!connect_result)
                     await Task.Delay(500);
@@ -239,7 +239,7 @@ namespace BiliveDanmakuAgent.Core
 
             if (connect_result)
             {
-                LogOutput?.Invoke(this, "弹幕服务器连接成功");
+                log.Info("Danmaku server connected.");
             }
         }
 
@@ -251,7 +251,7 @@ namespace BiliveDanmakuAgent.Core
             {
                 var (token, host, port) = await this.bililiveAPI.GetDanmuConf(this.RoomId);
 
-                LogOutput?.Invoke(this, $"连接弹幕服务器 {host}:{port} {(string.IsNullOrWhiteSpace(token) ? "无" : "有")} token");
+                log.Debug($"Connecting to {host}:{port} {(string.IsNullOrWhiteSpace(token) ? "without" : "with")} token");
 
                 this.dmClient = this.funcTcpClient();
                 await this.dmClient.ConnectAsync(host, port).ConfigureAwait(false);
@@ -283,7 +283,7 @@ namespace BiliveDanmakuAgent.Core
             catch (Exception ex)
             {
                 this.dmError = ex;
-                ExceptionHappened?.Invoke(this, ex, "连接弹幕服务器错误");
+                log.Warn("Failed to connect to Danmaku server", ex);
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.IsDanmakuConnected)));
                 return false;
             }
@@ -291,7 +291,7 @@ namespace BiliveDanmakuAgent.Core
 
         private void ReceiveMessageLoop()
         {
-            LogOutput?.Invoke(this, "ReceiveMessageLoop Started");
+            log.Info("ReceiveMessageLoop Started");
             try
             {
                 var stableBuffer = new byte[16];
@@ -361,7 +361,7 @@ namespace BiliveDanmakuAgent.Core
                                 }
                                 catch (Exception ex)
                                 {
-                                    ExceptionHappened?.Invoke(this, ex, "处理弹幕出错");
+                                    log.Warn("Error when processing danmaku", ex);
                                 }
                                 break;
                             default:
@@ -375,12 +375,12 @@ namespace BiliveDanmakuAgent.Core
                 this.dmError = ex;
                 // logger.Error(ex);
 
-                ExceptionHappened?.Invoke(this, ex, "连接断开");
+                log.Warn("Connection broken to Danmaku server", ex);
                 this.dmClient?.Close();
                 this.dmNetStream = null;
                 if (!(this.dmTokenSource?.IsCancellationRequested ?? true))
                 {
-                    ExceptionHappened?.Invoke(this, ex, "弹幕连接被断开，将尝试重连");
+                    log.Warn("Retrying...");
                     Task.Run(async () =>
                     {
                         await Task.Delay(500);
