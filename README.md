@@ -1,6 +1,6 @@
 # BiliveDanmakuAgent
 Bilibili直播快速开发平台  引入即用，快速上手  
-弹幕通讯相关解析摘录自[Bililive/BililiveRecorder](https://github.com/Bililive/BililiveRecorder)，感谢原作者。  
+弹幕通讯协议相关代码摘录自[Bililive/BililiveRecorder](https://github.com/Bililive/BililiveRecorder)，感谢原作者。  
 示例代码：
 ```csharp
 using BiliveDanmakuAgent;
