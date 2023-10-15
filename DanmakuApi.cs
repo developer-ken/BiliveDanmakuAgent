@@ -69,10 +69,10 @@ namespace BiliveDanmakuAgent
                     Gift?.Invoke(this, args);
                     break;
                 case DanmakuMsgType.LiveStart:
-                    LiveStartEvent?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo));
+                    LiveStartEvent?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo, danmaku));
                     break;
                 case DanmakuMsgType.LiveEnd:
-                    LiveEndEvent?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo));
+                    LiveEndEvent?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo, danmaku));
                     break;
                 case DanmakuMsgType.Unknown:
                     break;
@@ -83,13 +83,13 @@ namespace BiliveDanmakuAgent
                     Superchat?.Invoke(this, args);
                     break;
                 case DanmakuMsgType.RoomChange:
-                    RoomChange?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo));
+                    RoomChange?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo, danmaku));
                     break;
                 case DanmakuMsgType.RoomLock:
-                    RoomLockEvent?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo));
+                    RoomLockEvent?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo, danmaku));
                     break;
                 case DanmakuMsgType.CutOff:
-                    RoomCutOffEvent?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo));
+                    RoomCutOffEvent?.Invoke(sender, new RoomEventArgs(danmaku.RoomInfo, danmaku));
                     break;
             }
         }
