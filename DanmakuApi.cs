@@ -39,6 +39,7 @@ namespace BiliveDanmakuAgent
         private void Dc_DanmakuReceived(object sender, BililiveRecorder.Core.Api.Danmaku.DanmakuReceivedEventArgs e)
         {
             Danmaku danmaku = new Danmaku();
+            danmaku.UserMedal = e.Danmaku.UserMedal;
             danmaku.RoomInfo.AreaName = e.Danmaku.AreaName;
             danmaku.RoomInfo.ParentAreaName = e.Danmaku.ParentAreaName;
             danmaku.RoomInfo.RoomID = e.Danmaku.RoomID;

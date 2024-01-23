@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using BiliApi.Modules;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,6 +59,11 @@ namespace BiliveDanmakuAgent.Model
         /// 消息類型
         /// </summary>
         public DanmakuMsgType MsgType { get; set; }
+
+        /// <summary>
+        /// 用户当前佩戴的牌子
+        /// </summary>
+        public Medal? UserMedal { get; set; }
 
         /// <summary>
         /// 彈幕內容
