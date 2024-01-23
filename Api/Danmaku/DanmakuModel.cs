@@ -1,4 +1,6 @@
+using BiliApi.Modules;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 
 #nullable enable
 namespace BililiveRecorder.Core.Api.Danmaku
@@ -53,6 +55,11 @@ namespace BililiveRecorder.Core.Api.Danmaku
         /// 消息類型
         /// </summary>
         public DanmakuMsgType MsgType { get; set; }
+
+        /// <summary>
+        /// 用户当前佩戴的牌子
+        /// </summary>
+        public Medal? UserMedal { get; set; }
 
         /// <summary>
         /// 房间标题
@@ -205,6 +212,17 @@ namespace BililiveRecorder.Core.Api.Danmaku
                     this.IsAdmin = obj["info"]?[2]?[2]?.ToObject<string>() == "1";
                     this.IsVIP = obj["info"]?[2]?[3]?.ToObject<string>() == "1";
                     this.UserGuardLevel = obj["info"]?[7]?.ToObject<int>() ?? 0;
+                    this.UserMedal = obj["info"]?[3]?.Count() <1 ? null :
+                        new Medal()
+                        {
+                            Name = obj["info"]?[3]?[1]?.ToString(),
+                            Level = obj["info"]?[3]?[0]?.ToObject<int>() ?? 0,
+                            TargetName = obj["info"]?[3]?[2]?.ToString(),
+                            TargetId = obj["info"]?[3]?[12]?.ToObject<long>() ?? 0,
+                            MedalId = -1,
+                            Intimacy = -1,
+                            GuardLevel = -1
+                        };
                     break;
                 case "SEND_GIFT": // 送礼物
                     this.MsgType = DanmakuMsgType.GiftSend;
