@@ -66,6 +66,11 @@ namespace BiliveDanmakuAgent.Model
         public Medal? UserMedal { get; set; }
 
         /// <summary>
+        /// 用户头像地址
+        /// </summary>
+        public string? AvatarUrl { get; set; }
+
+        /// <summary>
         /// 彈幕內容
         /// <para>此项有值的消息类型：<list type="bullet">
         /// <item><see cref="DanmakuMsgType.Comment"/></item>
@@ -86,7 +91,7 @@ namespace BiliveDanmakuAgent.Model
         public string? UserName { get; set; }
 
         /// <summary>
-        /// SC 价格
+        /// SC 价格 / 礼物单价
         /// </summary>
         public double Price { get; set; }
 
@@ -132,6 +137,11 @@ namespace BiliveDanmakuAgent.Model
         /// <para>此字段也用于标识上船 <see cref="DanmakuMsgType.GuardBuy"/> 的数量（月数）</para>
         /// </summary>
         public int GiftCount { get; set; }
+
+        /// <summary>
+        /// 礼物是否是金瓜子礼物
+        /// </summary>
+        public bool GiftGoldcoin { get; set; }
 
         /// <summary>
         /// 该用户是否为房管（包括主播）

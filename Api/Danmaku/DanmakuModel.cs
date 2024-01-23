@@ -163,6 +163,11 @@ namespace BililiveRecorder.Core.Api.Danmaku
         public bool IsVIP { get; set; }
 
         /// <summary>
+        /// 用户头像地址
+        /// </summary>
+        public string? AvatarUrl { get; set; }
+
+        /// <summary>
         /// <see cref="DanmakuMsgType.LiveStart"/>,<see cref="DanmakuMsgType.LiveEnd"/> 事件对应的房间号
         /// </summary>
         public string? RoomID { get; set; }
@@ -212,6 +217,7 @@ namespace BililiveRecorder.Core.Api.Danmaku
                     this.IsAdmin = obj["info"]?[2]?[2]?.ToObject<string>() == "1";
                     this.IsVIP = obj["info"]?[2]?[3]?.ToObject<string>() == "1";
                     this.UserGuardLevel = obj["info"]?[7]?.ToObject<int>() ?? 0;
+                    this.AvatarUrl = obj["info"]?[0]?[15]?["user"]?["base"]?["face"]?.ToObject<string>();
                     this.UserMedal = obj["info"]?[3]?.Count() <1 ? null :
                         new Medal()
                         {
@@ -230,6 +236,19 @@ namespace BililiveRecorder.Core.Api.Danmaku
                     this.UserName = obj["data"]?["uname"]?.ToObject<string>();
                     this.UserID = obj["data"]?["uid"]?.ToObject<long>() ?? 0;
                     this.GiftCount = obj["data"]?["num"]?.ToObject<int>() ?? 0;
+                    this.Price = obj["data"]?["price"]?.ToObject<int>() ?? 0;
+                    this.AvatarUrl = obj["data"]?["face"]?.ToObject<string>();
+                    this.UserMedal = obj["data"]?["medal_info"]?.Count() < 1 ? null :
+                        new Medal()
+                        {
+                            Name = obj["data"]?["medal_info"]?["medal_name"]?.ToString(),
+                            Level = obj["data"]?["medal_info"]?["medal_level"]?.ToObject<int>() ?? 0,
+                            TargetName = null,
+                            TargetId = obj["data"]?["medal_info"]?["target_id"]?.ToObject<long>() ?? 0,
+                            MedalId = -1,
+                            Intimacy = -1,
+                            GuardLevel = obj["data"]?["medal_info"]?["guard_level"]?.ToObject<int>() ?? 0,
+                        };
                     break;
                 case "GUARD_BUY": // 购买舰长
                     {
