@@ -135,6 +135,11 @@ namespace BililiveRecorder.Core.Api.Danmaku
         public string? GiftName { get; set; }
 
         /// <summary>
+        /// 礼物ID
+        /// </summary>
+        public int? GiftId { get; set; }
+
+        /// <summary>
         /// 礼物数量
         /// <para>此项有值的消息类型：<list type="bullet">
         /// <item><see cref="DanmakuMsgType.GiftSend"/></item>
@@ -233,6 +238,7 @@ namespace BililiveRecorder.Core.Api.Danmaku
                 case "SEND_GIFT": // 送礼物
                     this.MsgType = DanmakuMsgType.GiftSend;
                     this.GiftName = obj["data"]?["giftName"]?.ToObject<string>();
+                    this.GiftId = obj["data"]?["giftId"]?.ToObject<int>();
                     this.UserName = obj["data"]?["uname"]?.ToObject<string>();
                     this.UserID = obj["data"]?["uid"]?.ToObject<long>() ?? 0;
                     this.GiftCount = obj["data"]?["num"]?.ToObject<int>() ?? 0;

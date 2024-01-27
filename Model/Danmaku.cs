@@ -129,6 +129,11 @@ namespace BiliveDanmakuAgent.Model
         public string? GiftName { get; set; }
 
         /// <summary>
+        /// 礼物Id
+        /// </summary>
+        public int? GiftId { get; set; }
+
+        /// <summary>
         /// 礼物数量
         /// <para>此项有值的消息类型：<list type="bullet">
         /// <item><see cref="DanmakuMsgType.GiftSend"/></item>

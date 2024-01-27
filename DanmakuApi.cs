@@ -58,6 +58,7 @@ namespace BiliveDanmakuAgent
             danmaku.IsAdmin = e.Danmaku.IsAdmin;
             danmaku.IsVIP = e.Danmaku.IsVIP;
             danmaku.AvatarUrl = e.Danmaku.AvatarUrl;
+            danmaku.GiftId = e.Danmaku.GiftId;
 
             BiliveDanmakuAgent.Model.DanmakuReceivedEventArgs args = new BiliveDanmakuAgent.Model.DanmakuReceivedEventArgs(danmaku);
             DanmakuMsgReceivedEvent?.Invoke(this, args);
