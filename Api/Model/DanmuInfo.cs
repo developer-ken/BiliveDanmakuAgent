@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace BililiveRecorder.Core.Api.Model
 {
-    internal class DanmuInfo
+    public class DanmuInfo
     {
         [JsonProperty("host_list")]
         public HostListItem[] HostList { get; set; } = Array.Empty<HostListItem>();
